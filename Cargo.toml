@@ -1,0 +1,12 @@
+[package]
+name = "sigmaos-iloveapi"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "SigmaOS component: iloveapi"
+
+[dependencies]
+
+[[bin]]
+name = "sigmaos-iloveapi"
+path = "src/main.rs"
