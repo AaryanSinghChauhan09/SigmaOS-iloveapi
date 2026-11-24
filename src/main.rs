@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::List { status } => {
             for j in mgr.list(status.map(Into::into)) {
-                println!("{} [{}] {} -> {} ({})", j.id, j.status, j.source.display(), j.target_format, j.provider);
+                println!("{} [{:?}] {} -> {} ({})", j.id, j.status, j.source.display(), j.target_format, j.provider);
             }
         }
         Commands::Show { id } => {
