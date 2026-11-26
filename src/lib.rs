@@ -149,7 +149,10 @@ impl JobManager {
             let msg = format!("unsupported: {source_ext} -> {}", job.target_format);
             job.status = JobStatus::Failed;
             job.error = Some(msg.clone());
-            return Err(ConvertError::Unsupported(source_ext, job.target_format.clone()));
+            return Err(ConvertError::Unsupported(
+                source_ext,
+                job.target_format.clone(),
+            ));
         }
         job.status = JobStatus::Processing;
         let source = job.source.clone();

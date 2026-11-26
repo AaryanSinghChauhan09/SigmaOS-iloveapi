@@ -1,11 +1,16 @@
 //! CLI for sigmaos-iloveapi.
 
 use clap::{Parser, Subcommand, ValueEnum};
-use sigmaos_iloveapi::{default_output_dir, default_store_path, CopyProvider, JobManager, JobStatus};
+use sigmaos_iloveapi::{
+    default_output_dir, default_store_path, CopyProvider, JobManager, JobStatus,
+};
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "sigmaos-iloveapi", about = "SigmaOS file conversion job manager")]
+#[command(
+    name = "sigmaos-iloveapi",
+    about = "SigmaOS file conversion job manager"
+)]
 struct Cli {
     #[arg(long, global = true)]
     store: Option<PathBuf>,
@@ -86,10 +91,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let mut mgr = load(&cli.store)?;
     match cli.command {
-        Commands::Create { source, to, provider } => {
+        Commands::Create {
+            source,
+            to,
+            provider,
+        } => {
             let job = mgr.create(source, &to, &provider)?;
             save(&mgr, &cli.store)?;
-            println!("created job {} ({} -> {})", job.id, job.source.display(), to);
+            println!(
+                "created job {} ({} -> {})",
+                job.id,
+                job.source.display(),
+                to
+            );
         }
         Commands::Run { id } => {
             let out_dir = default_output_dir().unwrap_or_else(|| PathBuf::from("./converted"));
@@ -100,15 +114,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::List { status } => {
             for j in mgr.list(status.map(Into::into)) {
-                println!("{} [{:?}] {} -> {} ({})", j.id, j.status, j.source.display(), j.target_format, j.provider);
+                println!(
+                    "{} [{:?}] {} -> {} ({})",
+                    j.id,
+                    j.status,
+                    j.source.display(),
+                    j.target_format,
+                    j.provider
+                );
             }
         }
-        Commands::Show { id } => {
-            match mgr.get(&id) {
-                Some(j) => println!("{}", serde_json::to_string_pretty(j)?),
-                None => return Err(format!("job not found: {id}").into()),
-            }
-        }
+        Commands::Show { id } => match mgr.get(&id) {
+            Some(j) => println!("{}", serde_json::to_string_pretty(j)?),
+            None => return Err(format!("job not found: {id}").into()),
+        },
         Commands::Remove { id } => {
             mgr.remove(&id)?;
             save(&mgr, &cli.store)?;
