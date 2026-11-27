@@ -236,3 +236,119 @@ impl ConversionProvider for CopyProvider {
         Ok(out)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct FailingProvider;
+    impl ConversionProvider for FailingProvider {
+        fn name(&self) -> &str {
+            "fail"
+        }
+        fn supports(&self, _s: &str, _d: &str) -> bool {
+            true
+        }
+        fn convert(&self, _s: &Path, _d: &str, _o: &Path) -> Result<PathBuf, ConvertError> {
+            Err(ConvertError::Provider("boom".into()))
+        }
+    }
+
+    struct SelectiveProvider;
+    impl ConversionProvider for SelectiveProvider {
+        fn name(&self) -> &str {
+            "sel"
+        }
+        fn supports(&self, _s: &str, d: &str) -> bool {
+            d == "pdf"
+        }
+        fn convert(&self, s: &Path, d: &str, o: &Path) -> Result<PathBuf, ConvertError> {
+            CopyProvider.convert(s, d, o)
+        }
+    }
+
+    fn fixture(tag: &str) -> (PathBuf, PathBuf) {
+        let dir = std::env::temp_dir().join(format!("iloveapi-{}-{}", tag, std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let src = dir.join("doc.txt");
+        std::fs::write(&src, "hello").unwrap();
+        (dir, src)
+    }
+
+    #[test]
+    fn create_validates_source_and_format() {
+        let (dir, src) = fixture("create");
+        let mut m = JobManager::default();
+        assert!(m.create(dir.join("missing.txt"), "pdf", "copy").is_err());
+        assert!(m.create(src.clone(), "", "copy").is_err());
+        let job = m.create(src, "PDF", "copy").unwrap();
+        assert_eq!(job.target_format, "pdf"); // lowercased
+        assert_eq!(job.status, JobStatus::Queued);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_success_marks_done_with_output() {
+        let (dir, src) = fixture("runok");
+        let outdir = dir.join("out");
+        let mut m = JobManager::default();
+        let job = m.create(src, "pdf", "copy").unwrap();
+        m.run(&job.id, &CopyProvider, &outdir).unwrap();
+        let j = m.get(&job.id).unwrap();
+        assert_eq!(j.status, JobStatus::Done);
+        assert!(j.output.as_ref().unwrap().ends_with("doc.pdf"));
+        assert!(j.output.as_ref().unwrap().exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_unsupported_marks_failed() {
+        let (dir, src) = fixture("unsup");
+        let mut m = JobManager::default();
+        let job = m.create(src, "png", "sel").unwrap();
+        let r = m.run(&job.id, &SelectiveProvider, &dir);
+        assert!(matches!(r, Err(ConvertError::Unsupported(_, _))));
+        let j = m.get(&job.id).unwrap();
+        assert_eq!(j.status, JobStatus::Failed);
+        assert!(j.error.as_ref().unwrap().contains("unsupported"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_provider_error_marks_failed() {
+        let (dir, src) = fixture("perr");
+        let mut m = JobManager::default();
+        let job = m.create(src, "pdf", "fail").unwrap();
+        assert!(m.run(&job.id, &FailingProvider, &dir).is_err());
+        assert_eq!(m.get(&job.id).unwrap().status, JobStatus::Failed);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn list_filters_by_status_and_remove() {
+        let (dir, src) = fixture("list");
+        let mut m = JobManager::default();
+        let j1 = m.create(src.clone(), "a", "copy").unwrap();
+        let j2 = m.create(src, "b", "copy").unwrap();
+        m.run(&j1.id, &CopyProvider, &dir).unwrap();
+        assert_eq!(m.list(None).len(), 2);
+        assert_eq!(m.list(Some(JobStatus::Done)).len(), 1);
+        assert_eq!(m.list(Some(JobStatus::Queued)).len(), 1);
+        m.remove(&j2.id).unwrap();
+        assert!(m.remove(&j2.id).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn save_load_roundtrip() {
+        let (dir, src) = fixture("save");
+        let mut m = JobManager::default();
+        m.create(src, "pdf", "copy").unwrap();
+        let path = dir.join("jobs.json");
+        m.save(&path).unwrap();
+        let back = JobManager::load(&path).unwrap();
+        assert_eq!(back.jobs.len(), 1);
+        assert!(JobManager::load(&dir.join("nope.json")).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
