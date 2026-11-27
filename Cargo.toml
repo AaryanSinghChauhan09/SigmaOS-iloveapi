@@ -1,23 +1,19 @@
 [package]
-name = "sigmaos-iloveapi"
+name = "sigmaos_iloveapi"
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
-description = "SigmaOS file conversion API abstraction (jobs, providers, formats)"
-
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0"
-log = "0.4"
-env_logger = "0.10"
-clap = { version = "4.0", features = ["derive"] }
-directories = "5.0"
-uuid = { version = "1.0", features = ["v4"] }
-
-[dev-dependencies]
-tempfile = "3.0"
+description = "SigmaOS iLoveAPI — API client and testing component"
 
 [[bin]]
-name = "sigmaos-iloveapi"
+name = "iloveapi"
 path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+log = "0.4"
+clap = { version = "4", features = ["derive"] }

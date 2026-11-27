@@ -1,10 +1,5 @@
 [component]
-name = "iloveapi"
-id = "sigmaos-iloveapi"
-kind = "component"
-license = "GPL-3.0-or-later"
-
-[component.metadata]
-category = "sigmaos"
-branch = "main"
-docs = "github-wiki"
+name = "SigmaOS-iloveapi"
+version = "0.1.0"
+category = "api-tools"
+description = "SigmaOS iLoveAPI — API client and testing component"

@@ -1,14 +1,2 @@
-target/
-Cargo.lock
-.idea/
-.vscode/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
-*.o
-*.a
-*.so
-*.dylib
-*.dll
-*.exe
+/target
+.env
